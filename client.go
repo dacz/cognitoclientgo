@@ -61,7 +61,7 @@ func (c *Client) Auth() (string, error) {
 }
 
 // JWTToken returns the token that can be sent in Authorization header
-// to API Gateway to authorize agains the Cognito UserPool
+// to API Gateway to authorize against the Cognito UserPool
 func (c *Client) JWTToken() string {
 	return c.idToken
 }
@@ -172,6 +172,9 @@ func (c *Client) initiateAuth() error {
 
 	// we need to process it twice and TeeReader here seems not to be more effective
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 
 	err = checkAWSRespError(body)
 	if err != nil {
@@ -233,6 +236,9 @@ func (c *Client) respondToAuthChallenge() error {
 
 	// we need to process it twice and TeeReader here seems not to be more effective
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 
 	err = checkAWSRespError(body)
 	if err != nil {
@@ -307,6 +313,9 @@ func (c *Client) GetUser(forcesl ...bool) (*User, error) {
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	err = checkAWSRespError(body)
 	if err != nil {
