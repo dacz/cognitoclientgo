@@ -1,4 +1,4 @@
-# cognitoclientgo
+# cognitoclientgo [![GoDoc](https://godoc.org/github.com/dacz/cognitoclientgo?status.png)](https://godoc.org/github.com/dacz/cognitoclientgo) [![Go Report Card](https://goreportcard.com/badge/github.com/dacz/cognitoclientgo)](https://goreportcard.com/report/github.com/dacz/cognitoclientgo)
 
 Implements authentication against AWS Cognito the same way
 as the client browser does (so you don't need the AWS IAM credentials to call the API).
