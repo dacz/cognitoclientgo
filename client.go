@@ -50,10 +50,12 @@ type User map[string]string
 func (c *Client) Auth() (string, error) {
 	err := c.initiateAuth()
 	if err != nil {
+		c.lastError = err
 		return "", err
 	}
 	err = c.respondToAuthChallenge()
 	if err != nil {
+		c.lastError = err
 		return "", err
 	}
 
@@ -116,11 +118,12 @@ func NewClient(inp Input) (*Client, error) {
 		return nil, err
 	}
 
+	timeout := 5 * time.Second
+
 	return &Client{
-		url: "https://cognito-idp." + s[0] + ".amazonaws.com/",
-		// flows:      []string{"InitiateAuth", "RespondToAuthChallenge"},
-		// flowIndex:  0,
-		httpc:      &http.Client{Timeout: 15 * time.Second},
+		url:        "https://cognito-idp." + s[0] + ".amazonaws.com/",
+		timeout:    timeout,
+		httpc:      &http.Client{Timeout: timeout},
 		csrp:       csrp,
 		region:     s[0],
 		userPoolID: inp.UserPoolID,
@@ -269,6 +272,7 @@ func (c *Client) respondToAuthChallenge() error {
 	c.accessToken = result.AuthenticationResult.AccessToken
 	c.idToken = result.AuthenticationResult.IdToken
 	c.refreshToken = result.AuthenticationResult.RefreshToken
+	c.tokensTime = time.Now()
 
 	return nil
 }
@@ -308,6 +312,7 @@ func (c *Client) GetUser(forcesl ...bool) (*User, error) {
 
 	resp, err := c.httpc.Do(req)
 	if err != nil {
+		c.lastError = err
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -319,6 +324,7 @@ func (c *Client) GetUser(forcesl ...bool) (*User, error) {
 
 	err = checkAWSRespError(body)
 	if err != nil {
+		c.lastError = err
 		return nil, err
 	}
 
@@ -333,6 +339,7 @@ func (c *Client) GetUser(forcesl ...bool) (*User, error) {
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
+		c.lastError = err
 		return nil, err
 	}
 
