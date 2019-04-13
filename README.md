@@ -40,14 +40,6 @@ Example usage
 	if err != nil {
 		...
     }
-
-    // if you need other tokens
-    // map[string]string{
-	// 	   "AccessToken":  xxx,
-	// 	   "IdToken":      xxx, // this one is used as JWTToken
-	// 	   "RefreshToken": xxx,
-	// }
-    tokens := c.Tokens()
 ```
 
 ## Credits
