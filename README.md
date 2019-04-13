@@ -18,28 +18,28 @@ It doesn't support federated identities for now.
 Example usage
 
 ```golang
-	c, err := cognitoclientgo.NewClient(client.Input{
-		UserPoolID: os.Getenv("COGNITO_USER_POOL_ID"),
-		ClientID:   os.Getenv("COGNITO_CLIENT_ID"),
-		SecretHash: os.Getenv("COGNITO_SECRET_HASH"), // OPTIONAL if configured with you client app
-		UserName:   os.Getenv("COGNITO_USERNAME"),
-		Password:   os.Getenv("COGNITO_PASSWORD"),
-	})
-	if err != nil {
-		...
-	}
+c, err := cognitoclientgo.NewClient(client.Input{
+    UserPoolID: os.Getenv("COGNITO_USER_POOL_ID"),
+    ClientID:   os.Getenv("COGNITO_CLIENT_ID"),
+    SecretHash: os.Getenv("COGNITO_SECRET_HASH"), // OPTIONAL if configured with you client app
+    UserName:   os.Getenv("COGNITO_USERNAME"),
+    Password:   os.Getenv("COGNITO_PASSWORD"),
+})
+if err != nil {
+    ...
+}
 
-	// jwtToken can be used in Authorization header sent to API GW
-	jwtToken, err := c.Auth()
-	if err != nil {
-		...
-	}
+// jwtToken can be used in Authorization header sent to API GW
+jwtToken, err := c.Auth()
+if err != nil {
+    ...
+}
 
-	// once authorized you can call getUser to get info about user from Cognito
-	user, err := c.GetUser()
-	if err != nil {
-		...
-    }
+// once authorized you can call getUser to get info about user from Cognito
+user, err := c.GetUser()
+if err != nil {
+    ...
+}
 ```
 
 ## Credits
@@ -48,4 +48,4 @@ SRP package: Alex Rudd (https://github.com/AlexRudd/cognito-srp) - lightly modif
 
 ## LICENSE
 
-MIT (see [license file](./LICENSE))
+Apache License (see [license file](./LICENSE))
