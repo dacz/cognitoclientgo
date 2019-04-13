@@ -3,6 +3,8 @@
 Implements authentication against AWS Cognito the same way
 as the client browser does (so you don't need the AWS IAM credentials to call the API).
 
+Use `client.Auth()` before all requests. If client has a valid and fresh tokens it uses them. If client holds refresh token, it uses this one to get new JWT token and for the first time or after even refresh token expires it uses full SRP auth.
+
 Use it if you want to write app or cli that has the same access as the
 regular registered user to your AWS Cognito User pool. I needed it to obtain
 the JWT token to authorize API calls to API Gateway that with Cognito Authorizer.
