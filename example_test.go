@@ -1,4 +1,4 @@
-package main
+package cognitoclientgo
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/dacz/cognitoclientgo"
+	// "github.com/dacz/cognitoclientgo"
 	"github.com/joho/godotenv"
 )
 
@@ -15,12 +15,12 @@ func printAndExit(err error) {
 	os.Exit(1)
 }
 
-func main() {
+func ExampleClient_Auth() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	c, err := cognitoclientgo.NewClient(cognitoclientgo.Input{
+	c, err := NewClient(Input{
 		UserPoolID: os.Getenv("COGNITO_USER_POOL_ID"),
 		ClientID:   os.Getenv("COGNITO_CLIENT_ID"),
 		SecretHash: os.Getenv("COGNITO_SECRET_HASH"),
@@ -33,7 +33,6 @@ func main() {
 
 	jwtToken, err := c.Auth()
 	if err != nil {
-		fmt.Println("SHOULD BE HERE")
 		printAndExit(err)
 	}
 
