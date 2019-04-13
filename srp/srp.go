@@ -128,7 +128,7 @@ func (csrp *CognitoSRP) GetSecretHash(username string) (string, error) {
 	msg := username + csrp.clientId
 	key := []byte(*csrp.clientSecret)
 	h := hmac.New(sha256.New, key)
-	h.Write([]byte(msg))
+	_, _ = h.Write([]byte(msg))
 	sh := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	return sh, nil
 }
@@ -159,7 +159,7 @@ func (csrp *CognitoSRP) PasswordVerifierChallenge(challengeParms map[string]stri
 
 	msg := csrp.poolName + userId + string(secretBlockBytes) + timestamp
 	hmacObj := hmac.New(sha256.New, hkdf)
-	hmacObj.Write([]byte(msg))
+	_, _ = hmacObj.Write([]byte(msg))
 	signature := base64.StdEncoding.EncodeToString(hmacObj.Sum(nil))
 	response := map[string]string{
 		"TIMESTAMP":                   timestamp,
@@ -209,7 +209,7 @@ func (csrp *CognitoSRP) getPasswordAuthenticationKey(username, password string, 
 
 func hashSha256(buf []byte) string {
 	a := sha256.New()
-	a.Write(buf)
+	_, _ = a.Write(buf)
 	return hex.EncodeToString(a.Sum(nil))
 }
 
@@ -232,7 +232,7 @@ func bigToHex(val *big.Int) string {
 
 func getRandom(n int) *big.Int {
 	b := make([]byte, n)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return hexToBig(hex.EncodeToString(b))
 }
 
@@ -250,11 +250,11 @@ func computeHKDF(ikm, salt string) []byte {
 	saltb, _ := hex.DecodeString(salt)
 
 	extractor := hmac.New(sha256.New, saltb)
-	extractor.Write(ikmb)
+	_, _ = extractor.Write(ikmb)
 	prk := extractor.Sum(nil)
 	infoBitsUpdate := append([]byte(infoBits), byte(1))
 	extractor = hmac.New(sha256.New, prk)
-	extractor.Write(infoBitsUpdate)
+	_, _ = extractor.Write(infoBitsUpdate)
 	hmacHash := extractor.Sum(nil)
 	return hmacHash[:16]
 }
