@@ -29,6 +29,7 @@ type Client struct {
 	idToken             string
 	refreshToken        string
 	tokensTime          time.Time
+	tokenExpireAt       time.Time
 	user                User
 	csrp                *srp.CognitoSRP
 	challengeParameters map[string]string
@@ -46,20 +47,48 @@ type Input struct {
 // User holds user data from cognito
 type User map[string]string
 
-// Auth starts the authorization and when success, returns the JWTToken
+// Auth returns the JWTToken and if needed it will start authorization flow
 func (c *Client) Auth() (string, error) {
-	err := c.initiateAuth()
-	if err != nil {
-		c.lastError = err
-		return "", err
+	var err error
+
+	// fresh token exists
+	if c.idToken != "" && c.tokenExpireAt.After(time.Now()) {
+		return c.idToken, nil
 	}
-	err = c.respondToAuthChallenge()
+
+	// refresh token auth
+	if c.refreshToken != "" {
+		err = c.initiateRefreshAuth()
+		if err == nil {
+			return c.idToken, nil
+		}
+		c.lastError = err
+		c.refreshToken = ""
+	}
+
+	// full auth
+	err = c.fullAuth()
 	if err != nil {
 		c.lastError = err
 		return "", err
 	}
 
 	return c.idToken, nil
+}
+
+func (c *Client) fullAuth() error {
+	err := c.initiateAuth()
+	if err != nil {
+		c.lastError = err
+		return err
+	}
+	err = c.respondToAuthChallenge()
+	if err != nil {
+		c.lastError = err
+		return err
+	}
+
+	return nil
 }
 
 // JWTToken returns the token that can be sent in Authorization header
@@ -69,7 +98,7 @@ func (c *Client) JWTToken() string {
 }
 
 // Tokens returns all three tokens
-// when they are empty, you probably need to register
+// when they are empty, you probably need to Auth
 func (c *Client) Tokens() map[string]string {
 	return map[string]string{
 		"AccessToken":  c.accessToken,
@@ -139,6 +168,88 @@ type initiateAuthInput struct {
 	ClientId       string // lintskip
 	AuthParameters map[string]string
 	// ClientMetadata: {}
+}
+
+// initiateAuth is first step of Auth
+func (c *Client) initiateRefreshAuth() error {
+	if c.refreshToken == "" {
+		return errors.New("No refresh token")
+	}
+
+	iaParams := &initiateAuthInput{
+		AuthFlow: "REFRESH_TOKEN_AUTH",
+		ClientId: c.clientID,
+		AuthParameters: map[string]string{
+			"REFRESH_TOKEN": c.refreshToken,
+			// "DEVICE_KEY":    null,
+		},
+	}
+
+	// if secret is configured
+	if c.secretHash != "" {
+		iaParams.AuthParameters["SECRET_HASH"], _ = c.csrp.GetSecretHash(c.userName)
+	}
+
+	// serialize and post to initauth
+	var out bytes.Buffer
+	enc := json.NewEncoder(&out)
+	err := enc.Encode(iaParams)
+	if err != nil {
+		return err
+	}
+
+	// prepare request
+	req, err := http.NewRequest("POST", c.url, &out)
+	if err != nil {
+		return err
+	}
+
+	// add headers
+	req.Header.Add(contentHeader())
+	req.Header.Add(flowHeader("InitiateAuth"))
+
+	resp, err := c.httpc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// we need to process it twice and TeeReader here seems not to be more effective
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = checkAWSRespError(body)
+	if err != nil {
+		// check error type and possibly delete refresh token - now deleting it
+		c.refreshToken = ""
+		return err
+	}
+
+	// deserialize json data
+	var result struct {
+		AuthenticationResult struct {
+			AccessToken string
+			IdToken     string
+			TokenType   string
+			ExpiresIn   int
+		}
+		ChallengeParameters map[string]string
+	}
+
+	// unmarshal here
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return err
+	}
+
+	c.accessToken = result.AuthenticationResult.AccessToken
+	c.idToken = result.AuthenticationResult.IdToken
+	c.tokenExpireAt = time.Now().Add(time.Duration(result.AuthenticationResult.ExpiresIn))
+	c.tokensTime = time.Now()
+
+	return nil
 }
 
 // initiateAuth is first step of Auth
@@ -254,6 +365,7 @@ func (c *Client) respondToAuthChallenge() error {
 			AccessToken  string
 			IdToken      string // lintskip
 			RefreshToken string
+			ExpiresIn    int
 			TokenType    string
 		}
 		ChallengeParameters map[string]string
@@ -264,14 +376,10 @@ func (c *Client) respondToAuthChallenge() error {
 		return err
 	}
 
-	if result.AuthenticationResult.IdToken == "" {
-		fmt.Printf("Missing token in response %#v\n", result)
-		return errors.New("Missing tokens in response")
-	}
-
 	c.accessToken = result.AuthenticationResult.AccessToken
 	c.idToken = result.AuthenticationResult.IdToken
 	c.refreshToken = result.AuthenticationResult.RefreshToken
+	c.tokenExpireAt = time.Now().Add(time.Duration(result.AuthenticationResult.ExpiresIn))
 	c.tokensTime = time.Now()
 
 	return nil

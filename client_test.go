@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -76,7 +77,7 @@ func TestNewClient_fail(t *testing.T) {
 
 func TestAuth(t *testing.T) {
 	// load real testing env
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		t.Skip("Error loading .env file - skipping the test. Provide .env to make real test")
 	}
@@ -102,11 +103,30 @@ func TestAuth(t *testing.T) {
 	if jwtToken == "" {
 		t.Fatal("No error but jwtToken is empty")
 	}
+
+	timeDiff := time.Now().Unix() - c.tokenExpireAt.Unix()
+	if timeDiff > 2 {
+		t.Fatalf("tokenExpireAt should be fresh but is %d sec older\n", timeDiff)
+	}
+
+	prevAccessToken, prevExpire := c.accessToken, c.tokenExpireAt
+	err = c.initiateRefreshAuth()
+	if err != nil {
+		t.Fatal("initiateRefreshAuth should not return error but: ", err.Error())
+	}
+
+	if prevExpire.Equal(c.tokenExpireAt) {
+		t.Fatal("tokenExpireAt should refresh and not be the same")
+	}
+
+	if prevAccessToken == c.accessToken {
+		t.Fatal("accessTokens should differ")
+	}
 }
 
 func TestAuth_fail(t *testing.T) {
 	// load real testing env
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		t.Skip("Error loading .env file - skipping the test. Provide .env to make real test")
 	}
